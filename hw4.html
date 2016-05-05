@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title> XMLExercise </title>
+        <style>
+            body {margin: 0; padding: 0;}
+            .content {width: 300px;margin: 0 auto; text-align: center}
+        </style>
+        <script type="text/javascript">
+            var xmlDoc;
+            var isEmptyList = false;
+            
+            function generateHTML(xmlDoc) {  
+                ELEMENT_NODE = 1;    // MS parser doesn't define Node.ELEMENT_NODE
+                root=xmlDoc.DocumentElement;
+                html_text="<html><head><title>Cable Networks</title><style>td{height:70;}</style></head>";
+                html_text+="<body>";
+                html_text+="<table border='2'>";
+                var headerNodeList;
+                var headers = xmlDoc.getElementsByTagName("Header");
+                if(headers.length>0){
+                    headerNodeList = xmlDoc.getElementsByTagName("Header").item(0).childNodes;
+                }
+                rows=xmlDoc.getElementsByTagName("Row");
+                networks = xmlDoc.getElementsByTagName("Network");
+                if(headers.length<=0 || rows.length<=0 || networks.length<=0) {
+                    alert("The network list is empty. Please try again with another file.");
+                    isEmptyList = true;
+                    document.getElementById('fileName').focus();
+                    return;
+                }
+                networkNodeList=rows.item(0).childNodes;
+                html_text+="<tbody>";
+                html_text+="<tr>";
+
+                for(i=0;i<headerNodeList.length;i++) {
+                    if(headerNodeList.item(i).nodeType==ELEMENT_NODE) {
+                        header=headerNodeList.item(i).firstChild.nodeValue;
+			            html_text+="<th>"+header+"</th>";  
+                    }
+                }
+                html_text+="</tr>";
+
+                for(i=0;i<rows.length;i++) {  
+                    networkNodeList=rows.item(i).childNodes;
+                    html_text+="<tr>";
+                    for(j=0;j<networkNodeList.length;j++) {  
+                        if(networkNodeList.item(j).nodeType==ELEMENT_NODE) { 
+                            if(networkNodeList.item(j).nodeName=="Feeds") {
+                                var feedList = networkNodeList.item(j).childNodes;
+                                if(feedList!=null) {
+                                    html_text += "<td><ul>";
+                                    for(k=0;k<feedList.length;k++) {
+                                        if(feedList.item(k).nodeType==ELEMENT_NODE) {
+                                            if(feedList.item(k).firstChild!=null) {
+                                                var feed = feedList.item(k).firstChild.nodeValue;
+                                                feed = feed.trim();
+                                                html_text += feed.length>0?"<li>"+feed+"</li>":"";
+                                            }
+                                        }         
+                                    }
+                                    html_text+="</ul></td>";
+                                } else {
+                                    html_text+="<td></td>";
+                                }
+                            } else if(networkNodeList.item(j).nodeName=="HomePage") {
+                                var homeTd = networkNodeList.item(j).firstChild;
+                                html_text += homeTd!=null ? "<td><a href='"+homeTd.nodeValue+"'>"+homeTd.nodeValue+"</a></td>" : "<td></td>" ;
+                            } else if(networkNodeList.item(j).nodeName=="Logo") {
+                                if(networkNodeList.item(j).firstChild != null){
+                                    var logo = networkNodeList.item(j).firstChild.nodeValue;
+                                    logo = logo.trim();
+                                    html_text += logo.length>0 ? "<td><img src='"+logo+"' height='70' width='150'></td>" : "<td></td>";
+                                }
+                            } else {
+                                html_text+= networkNodeList.item(j).firstChild!=null ? "<td>"+ networkNodeList.item(j).firstChild.nodeValue +"</td>" : "<td></td>";
+                            }   
+                        }    
+                    }
+                    html_text+="</tr>";  
+                }
+                html_text+="</tbody>";  html_text+="</table>";
+                html_text+="</bo"+"dy>";
+                html_text+="</html>";  
+            }
+            
+            function viewXML(form){
+                var status = 0;
+                var URL = document.getElementById("fileName").value;
+                if(URL.length < 1) {
+                    alert("Please enter a file name");
+                    document.getElementById('fileName').focus();
+                    return false;
+                }
+                function loadXML(url) {
+                    if (window.XMLHttpRequest) {
+                        // code for IE7+, Firefox, Chrome, Opera, Safari
+                        xmlhttp=new XMLHttpRequest(); 
+                    } else {
+                        // code for IE6, IE5
+                        xmlhttp=new ActiveXObject("Microsoft.XMLHTTP"); 
+                    }
+                    // open, send, responseXML are properties of XMLHTTPRequest
+                    xmlhttp.open("GET",url,false);
+                    xmlhttp.send();
+                    status = xmlhttp.status;
+                    xmlDoc=xmlhttp.responseXML;
+                    return xmlDoc;
+                }
+                xmlDoc = loadXML(URL);
+                if (status==404){
+                    alert("File not found. Please try again.");
+                    document.getElementById('fileName').focus();
+                    return false;
+                }
+                         
+                if(xmlDoc == null || (xmlDoc.activeElement !=null && xmlDoc.activeElement.nodeName=="parsererror")) {
+                    alert("Invalid XML file. Please enter a valid XML file");
+                    document.getElementById('fileName').focus();
+                    return false;
+                } 
+                if (window.ActiveXObject) //if IE, simply execute script (due to async prop).
+                {
+                    if (xmlDoc.parseError.errorCode != 0) {
+                        var myErr = xmlDoc.parseError;
+                        generateError(xmlDoc);
+                        hWin = window.open("", "Error", "height=300,width=340");
+                        hWin.document.write(html_text);
+                    } else {  
+                        generateHTML(xmlDoc);
+                        hWin = window.open("", "Assignment4", "height=800,width=600");
+                        hWin.document.write(html_text);   }
+                } else //else if FF, execute script once XML object has loaded
+                {
+                    xmlDoc.onload=generateHTML(xmlDoc);
+                    if(isEmptyList){
+                        return false;
+                    }
+                    hWin = window.open("", "Assignment4", "scrollbars=1,height=800,width=1000");
+                    hWin.document.write(html_text);  
+                }
+                hWin.document.close();
+                return false;
+            }
+        </script>
+    </head>
+    <body>
+        <div class="content">
+            <br><br>
+            <p> Enter URL for Company List XML File </p>
+            <form name="myForm" method="get" id="myForm" onsubmit = "return viewXML(this.form)">
+                <input id="fileName" type="text" name="URL" value="">
+                <br><br>
+                <input type="submit" name="submit" value="Submit Query">
+            </form>
+        </div>
+        <noscript>
+    </body>
+</html>
